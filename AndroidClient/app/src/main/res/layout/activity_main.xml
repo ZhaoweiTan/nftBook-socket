@@ -26,9 +26,9 @@
         android:layout_marginRight="24dp"
         android:layout_marginTop="16dp"
         android:ems="10"
-        android:hint="131.179.176.34"
+        android:hint="131.179.80.180"
         android:inputType="textPersonName"
-        android:text="131.179.80.180"
+        android:text="131.179.176.34"
         app:layout_constraintRight_toRightOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
@@ -52,9 +52,9 @@
         android:layout_marginRight="24dp"
         android:layout_marginTop="8dp"
         android:ems="10"
-        android:hint="9999"
+        android:hint="48010"
         android:inputType="textPersonName"
-        android:text="48010"
+        android:text="9999"
         app:layout_constraintRight_toRightOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/editTextServerAddr" />
 

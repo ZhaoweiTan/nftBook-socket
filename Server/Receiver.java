@@ -11,7 +11,7 @@ public class Receiver {
     public void run(int port) {    
       try {
         DatagramSocket serverSocket = new DatagramSocket(port);
-        byte[] receiveData = new byte[100];
+        byte[] receiveData = new byte[2000];
      
         DatagramPacket receivePacket = new DatagramPacket(receiveData,
                            receiveData.length);
@@ -22,8 +22,8 @@ public class Receiver {
               serverSocket.receive(receivePacket);
               String sentence = new String( receivePacket.getData(), 0,
                                  receivePacket.getLength() );
-              System.out.println("RECEIVED: " + sentence);
-              
+              System.out.println("RECEIVED: " + Integer.toString(sentence.length()));
+              System.out.println(sentence);
               // now send acknowledgement packet back to sender     
               InetAddress IPAddress = receivePacket.getAddress();
               String sendString = "ACK";

@@ -1,5 +1,10 @@
 package com.example.myapplication;
 
+import android.content.Context;
+import android.hardware.Sensor;
+import android.hardware.SensorEvent;
+import android.hardware.SensorEventListener;
+import android.hardware.SensorManager;
 import android.net.wifi.WifiInfo;
 import android.net.wifi.WifiManager;
 import android.support.v7.app.AppCompatActivity;
@@ -19,14 +24,15 @@ import java.net.NetworkInterface;
 import java.net.SocketException;
 import java.util.Enumeration;
 
-public class MainActivity extends AppCompatActivity {
-
+public class MainActivity extends AppCompatActivity implements SensorEventListener {
     EditText serverAddr, clientPort, serverPort;
     Button buttonConnect;
     TextView outputText;
     DatagramSocket SendSocket;
     UdpSendThread udpSendThread;
     Boolean isRunning = false;
+    private SensorManager mSensorManager;
+    private Sensor mLight;
 
     private final static int MAXPKTSIZE = 99999;
     private static final String TAG = "UDPSocket";
@@ -45,6 +51,9 @@ public class MainActivity extends AppCompatActivity {
 
         outputText = (TextView)findViewById(R.id.Output);
         outputText.setMovementMethod(ScrollingMovementMethod.getInstance());
+
+        mSensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
+        mLight = mSensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
     }
 
     View.OnClickListener buttonConnectOnClickListener = new View.OnClickListener() {
@@ -100,7 +109,6 @@ public class MainActivity extends AppCompatActivity {
 
 
     private class UdpSendThread extends Thread{
-
         DatagramSocket SendSocket;
         int ServerPort;
         InetAddress ServerAddr;
@@ -156,5 +164,34 @@ public class MainActivity extends AppCompatActivity {
                 closeSockets();
             }
         }
+    }
+
+    @Override
+    public final void onAccuracyChanged(Sensor sensor, int accuracy) {
+        // Do something here if sensor accuracy changes.
+    }
+
+    @Override
+    public final void onSensorChanged(SensorEvent event) {
+        // The light sensor returns a single value.
+        // Many sensors return 3 values, one for each axis.
+        float x = event.values[0];
+        float y = event.values[1];
+        float z = event.values[2];
+
+        // Do something with this sensor value.
+        Log.d(TAG, Float.toString(x) + ' ' + Float.toString(y) + ' ' + Float.toString(z));
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        mSensorManager.registerListener(this, mLight, SensorManager.SENSOR_DELAY_NORMAL);
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        mSensorManager.unregisterListener(this);
     }
 }

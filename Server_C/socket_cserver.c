@@ -43,7 +43,15 @@ main(int argc, char **argv)
 		recvlen = recvfrom(fd, buf, BUFSIZE, 0, (struct sockaddr *)&remaddr, &addrlen);
 		if (recvlen > 0) {
 			buf[recvlen] = 0;
-			printf("received message: \"%s\" (%d bytes)\n", buf, recvlen);
+			short* frame_id = (short*)malloc(sizeof(short));
+			memcpy(frame_id, buf, 2);
+			short* segment_id = (short*)malloc(sizeof(short));
+			*segment_id = 0;
+			memcpy(frame_id, buf + 2, 1);
+			short* last_segment_tag = (short*)malloc(sizeof(short));
+			*last_segment_tag = 0;
+			memcpy(last_segment_tag, buf + 3, 1);
+			printf("received message frame id: %hi, segment id: $hi, last segment flag: %hi\n", *frame_id, *segment_id, *last_segment_tag);
 		}
 		else
 			printf("uh oh - something went wrong!\n");

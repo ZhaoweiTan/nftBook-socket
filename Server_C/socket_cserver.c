@@ -18,6 +18,7 @@ main(int argc, char **argv)
 	int fd;				/* our socket */
 	int msgcnt = 0;			/* count # of messages we received */
 	unsigned char buf[BUFSIZE];	/* receive buffer */
+	unsigned char* whole_frame = (char*)malloc(12100);
 
 
 	/* create a UDP socket */
@@ -37,28 +38,38 @@ main(int argc, char **argv)
 		return 0;
 	}
 
-	/* now loop, receiving data and printing what we received */
-	for (;;) {
-		printf("waiting on port %d\n", SERVICE_PORT);
-		recvlen = recvfrom(fd, buf, BUFSIZE, 0, (struct sockaddr *)&remaddr, &addrlen);
-		if (recvlen > 0) {
-			buf[recvlen] = 0;
-			short* frame_id = (short*)malloc(sizeof(short));
-			memcpy(frame_id, buf, 2);
-			short* segment_id = (short*)malloc(sizeof(short));
-			*segment_id = 0;
-			memcpy(frame_id, buf + 2, 1);
-			short* last_segment_tag = (short*)malloc(sizeof(short));
-			*last_segment_tag = 0;
-			memcpy(last_segment_tag, buf + 3, 1);
-			printf("received message frame id: %hi, segment id: $hi, last segment flag: %hi\n", *frame_id, *segment_id, *last_segment_tag);
+	for (;;)
+	{
+		int last_id = 0;
+		/* now loop, receiving data and printing what we received */
+		int total_size_received = 0;
+		while (last_id == 0) 
+		{
+			printf("waiting on port %d\n", SERVICE_PORT);
+			recvlen = recvfrom(fd, buf, BUFSIZE, 0, (struct sockaddr *)&remaddr, &addrlen);
+			if (recvlen > 0) {
+				buf[recvlen] = '\0';
+
+				memcpy(whole_frame+total_size_received, buf+4, recvlen-4);
+				total_size_received += recvlen-4;
+
+				short* frame_id = (short*)malloc(sizeof(short));
+				*frame_id = 0;
+				memcpy(frame_id, buf, 2);
+				short* segment_id = (short*)malloc(sizeof(short));
+				*segment_id = 0;
+				memcpy(segment_id, buf + 2, 1);
+				short* last_segment_tag = (short*)malloc(sizeof(short));
+				*last_segment_tag = 0;
+				memcpy(last_segment_tag, buf + 3, 1);
+				last_id = *last_segment_tag;
+				printf("received message frame id: %hi, segment id: %hi, last segment flag: %hi\n", *frame_id, *segment_id, *last_segment_tag);
+			}
+			else
+				printf("uh oh - something went wrong!\n");
 		}
-		else
-			printf("uh oh - something went wrong!\n");
-		sprintf(buf, "ack %d", msgcnt++);
-		printf("sending response \"%s\"\n", buf);
-		if (sendto(fd, buf, strlen(buf), 0, (struct sockaddr *)&remaddr, addrlen) < 0)
-			perror("sendto");
+
+		printf("!!!!!Received one whole frame!!!!! length is: %d\n", total_size_received);
 	}
 	/* never exits */
 }

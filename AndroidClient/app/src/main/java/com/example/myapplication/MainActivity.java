@@ -1,6 +1,9 @@
 package com.example.myapplication;
 
+import android.content.BroadcastReceiver;
 import android.content.Context;
+import android.content.Intent;
+import android.content.IntentFilter;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
@@ -39,6 +42,10 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     private static final String TAG = "UDPSocket";
     private static final String TAG2 = "Receiver";
 
+    private boolean new_mac = false;
+    private float mac_loss;
+    private float mac_retx_delay;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -56,6 +63,10 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
         mSensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
         mLight = mSensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
+
+
+        IntentFilter mac_loss_filter = new IntentFilter("MobileInsight.LteMacAnalyzer.MAC_RETX");
+        registerReceiver(MobileInsight_Receiver, mac_loss_filter);
     }
 
     View.OnClickListener buttonConnectOnClickListener = new View.OnClickListener() {
@@ -116,11 +127,11 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         InetAddress ServerAddr;
         boolean running = true;
 
-        int currentFrame = 0;
+        int currentFrame = -1;
         int last_packet_id = 0;
         Date firstPktTime;
 
-        private static final int packet_max = 5;
+        private static final int packet_max = 2;
 
 
         public UdpSendThread(DatagramSocket _sendsocket, int _serverport, InetAddress _serveraddr) throws SocketException {
@@ -166,27 +177,34 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                     DatagramPacket packet = new DatagramPacket(buf, buf.length);
                     SendSocket.receive(packet);
                     String receive_string = new String(packet.getData(), 0, packet.getLength() );
-                    Log.d(TAG2, "message receive: " + receive_string);
+                    // Log.d(TAG2, "message receive: " + receive_string);
 
                     String frame_id_string = receive_string.substring(0, 1);
                     String packet_id_string = receive_string.substring(1, 2);
 
                     int frame_id = Integer.parseInt(frame_id_string);
                     int packet_id = Integer.parseInt(packet_id_string);
-                    Log.d(TAG2, "frame id is: " + String.valueOf(frame_id) + " packet id is: " + String.valueOf(packet_id));
+                    // Log.d(TAG2, "frame id is: " + String.valueOf(frame_id) + " packet id is: " + String.valueOf(packet_id));
 
                     if (currentFrame == frame_id) {
                         if (packet_id == last_packet_id + 1) {
                             last_packet_id = packet_id;
-                            if (packet_id == packet_max) {
+                            if (packet_id == packet_max - 1) {
+                                if (!new_mac) {
+                                    mac_loss = 0;
+                                    mac_retx_delay = 0;
+                                } else {
+                                    new_mac = false;
+                                }
                                 float timeDif = (new Date()).getTime() - firstPktTime.getTime();
-                                Log.i(TAG2, "The transmission delay is " + String.valueOf(timeDif));
+                                Log.i(TAG2, "The transmission delay is " + String.valueOf(timeDif) + "ms, MAC loss " + String.valueOf(mac_loss) + " packets, average delay is " + String.valueOf(mac_retx_delay) );
                             }
                         }
-                    } else if (currentFrame < frame_id) {
-                        if (packet_id == 1) {
+                    } else if (currentFrame < frame_id || frame_id == 0) {
+                        if (packet_id == 0) {
                             firstPktTime = new Date();
                             currentFrame = frame_id;
+                            last_packet_id = 0;
                         }
                     }
                 }
@@ -226,4 +244,19 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         super.onPause();
         mSensorManager.unregisterListener(this);
     }
+
+
+    private final BroadcastReceiver MobileInsight_Receiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+
+        if (intent.getAction().equals("android.appwidget.action.APPWIDGET_ENABLED")) {
+            //TODO: ???
+        } else if (intent.getAction().equals("MobileInsight.LteMacAnalyzer.MAC_RETX")) {
+            new_mac = true;
+            mac_loss = Float.parseFloat(intent.getStringExtra("packet loss (pkt/s)"));
+            mac_retx_delay =  Float.parseFloat(intent.getStringExtra("retransmission delay (ms/pkt)"));
+        }
+    }
+};
 }

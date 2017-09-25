@@ -13,6 +13,7 @@ public class SensorActivity extends Activity implements SensorEventListener {
     private SensorManager mSensorManager;
     private Sensor mLight;
 
+
     @Override
     public final void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);

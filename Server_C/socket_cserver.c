@@ -3,10 +3,15 @@
 #include <string.h>
 #include <netdb.h>
 #include <sys/socket.h>
+#include <unistd.h>
 #include <arpa/inet.h>
 
 #define BUFSIZE 2048
 #define SERVICE_PORT	48010
+#define PKTSIZE 1000
+#define MAXFRAME 10
+#define MAXPKT 5
+
 
 int
 main(int argc, char **argv)
@@ -37,6 +42,32 @@ main(int argc, char **argv)
 		perror("bind failed");
 		return 0;
 	}
+  
+  int frame_id = 0;
+  int packet_id = 1;
+
+  char pkt[PKTSIZE];
+  memset(pkt, sizeof(pkt), 1);
+  /* Override the loop, sending the video frames */
+  recvlen = recvfrom(fd, buf, BUFSIZE, 0, (struct sockaddr *)&remaddr, &addrlen);
+  while (1) {
+    itoa(frame_id, pkt);
+
+    sleep(1);
+    for (int i = 0; i < MAXPKT; i = i + 1) {
+      itoa(i, pkt + 4);
+      n = sendto(fd, pkt, strlen(pkt), 0, &remaddr, addrlen);
+      if (n < 0)
+        error("ERROR in sendto");
+    }
+    frame_id = frame_id + 1;
+    if (frame_id == MAXFRAME)
+      break;
+  }
+
+
+  return 0;
+
 
 	for (;;)
 	{

@@ -154,9 +154,9 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                 byte[] message = messageStr.getBytes();
 
                 // send the message
-                DatagramPacket p = new DatagramPacket(message, msg_length, ServerAddr, ServerPort);
-                Log.d(TAG, "message sent");
-                SendSocket.send(p);
+//                DatagramPacket p = new DatagramPacket(message, msg_length, ServerAddr, ServerPort);
+//                Log.d(TAG, "message sent");
+//                SendSocket.send(p);
 
                 // receiving the message
                 while(running) {
@@ -164,8 +164,8 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                     DatagramPacket packet = new DatagramPacket(buf, buf.length);
                     SendSocket.receive(packet);
                     String receive_string = new String(packet.getData(), 0, packet.getLength() );
-                    String frame_id_string = receive_string.substring(0, 5);
-                    String packet_id_string = receive_string.substring(5, 6);
+                    String frame_id_string = receive_string.substring(0, 4);
+                    String packet_id_string = receive_string.substring(4, 8);
 
                     int frame_id = Integer.parseInt(frame_id_string);
                     int packet_id = Integer.parseInt(packet_id_string);

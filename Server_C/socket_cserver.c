@@ -7,7 +7,7 @@
 #include <arpa/inet.h>
 
 #define BUFSIZE 2048
-#define SERVICE_PORT	48010
+#define SERVICE_PORT 9999
 #define PKTSIZE 1000
 #define MAXFRAME 10
 #define MAXPKT 5
@@ -43,20 +43,33 @@ main(int argc, char **argv)
 		return 0;
 	}
   
+  
+  
+  for (;;) {
+    printf("waiting on port %d\n", SERVICE_PORT);
+    recvlen = recvfrom(fd, buf, BUFSIZE, 0, (struct sockaddr *)&remaddr, &addrlen);
+    if (recvlen > 0) {
+      printf("Reciving init packet\n");
+      break;
+    }
+  }
+
+  
+  /* Override the loop, sending the video frames */
   int frame_id = 0;
-  int packet_id = 1;
 
   char pkt[PKTSIZE];
   memset(pkt, sizeof(pkt), 1);
-  /* Override the loop, sending the video frames */
-  recvlen = recvfrom(fd, buf, BUFSIZE, 0, (struct sockaddr *)&remaddr, &addrlen);
+
   while (1) {
-    itoa(frame_id, pkt);
+    // itoa(frame_id, pkt);
 
     sleep(1);
-    for (int i = 0; i < MAXPKT; i = i + 1) {
-      itoa(i, pkt + 4);
-      n = sendto(fd, pkt, strlen(pkt), 0, &remaddr, addrlen);
+    int i = 0;
+    for (; i < MAXPKT; i = i + 1) {
+      // itoa(i, pkt + 4);
+      sprintf(pkt, "%d%d", frame_id, i);
+      int n = sendto(fd, pkt, strlen(pkt), 0, (struct sockaddr *)&remaddr, addrlen);
       if (n < 0)
         error("ERROR in sendto");
     }

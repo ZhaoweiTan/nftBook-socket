@@ -37,6 +37,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
     private final static int MAXPKTSIZE = 99999;
     private static final String TAG = "UDPSocket";
+    private static final String TAG2 = "Receiver";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -154,42 +155,43 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                 byte[] message = messageStr.getBytes();
 
                 // send the message
-//                DatagramPacket p = new DatagramPacket(message, msg_length, ServerAddr, ServerPort);
-//                Log.d(TAG, "message sent");
-//                SendSocket.send(p);
+                DatagramPacket p = new DatagramPacket(message, msg_length, ServerAddr, ServerPort);
+                Log.d(TAG2, "message sent");
+                SendSocket.send(p);
 
                 // receiving the message
                 while(running) {
+                    // Log.i(TAG2, "Start running");
                     byte[] buf = new byte[MAXPKTSIZE];
                     DatagramPacket packet = new DatagramPacket(buf, buf.length);
                     SendSocket.receive(packet);
                     String receive_string = new String(packet.getData(), 0, packet.getLength() );
-                    String frame_id_string = receive_string.substring(0, 4);
-                    String packet_id_string = receive_string.substring(4, 8);
+                    Log.d(TAG2, "message receive: " + receive_string);
+
+                    String frame_id_string = receive_string.substring(0, 1);
+                    String packet_id_string = receive_string.substring(1, 2);
 
                     int frame_id = Integer.parseInt(frame_id_string);
                     int packet_id = Integer.parseInt(packet_id_string);
+                    Log.d(TAG2, "frame id is: " + String.valueOf(frame_id) + " packet id is: " + String.valueOf(packet_id));
+
                     if (currentFrame == frame_id) {
                         if (packet_id == last_packet_id + 1) {
                             last_packet_id = packet_id;
                             if (packet_id == packet_max) {
                                 float timeDif = (new Date()).getTime() - firstPktTime.getTime();
-                                Log.i("receiver", "The transmission delay is " + String.valueOf(timeDif));
+                                Log.i(TAG2, "The transmission delay is " + String.valueOf(timeDif));
                             }
-                            continue;
                         }
                     } else if (currentFrame < frame_id) {
                         if (packet_id == 1) {
                             firstPktTime = new Date();
                             currentFrame = frame_id;
                         }
-                    } else {
-                        continue;
                     }
-                    // Log.d(TAG, "message receive: " + receive_string);
                 }
             } catch (Exception e) {
-                // Log.e(TAG, "exception", e);
+                Log.e(TAG2, "exception", e);
             } finally {
                 closeSockets();
             }
@@ -210,7 +212,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         float z = event.values[2];
 
         // Do something with this sensor value.
-        Log.d(TAG, Float.toString(x) + ' ' + Float.toString(y) + ' ' + Float.toString(z));
+        // Log.d(TAG, Float.toString(x) + ' ' + Float.toString(y) + ' ' + Float.toString(z));
     }
 
     @Override

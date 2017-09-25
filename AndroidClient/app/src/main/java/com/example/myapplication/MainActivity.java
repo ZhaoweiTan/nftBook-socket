@@ -22,6 +22,7 @@ import java.net.Inet4Address;
 import java.net.InetAddress;
 import java.net.NetworkInterface;
 import java.net.SocketException;
+import java.util.Date;
 import java.util.Enumeration;
 
 public class MainActivity extends AppCompatActivity implements SensorEventListener {
@@ -114,6 +115,13 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         InetAddress ServerAddr;
         boolean running = true;
 
+        int currentFrame = 0;
+        int last_packet_id = 0;
+        Date firstPktTime;
+
+        private static final int packet_max = 5;
+
+
         public UdpSendThread(DatagramSocket _sendsocket, int _serverport, InetAddress _serveraddr) throws SocketException {
             super();
             this.SendSocket = _sendsocket;
@@ -156,7 +164,29 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                     DatagramPacket packet = new DatagramPacket(buf, buf.length);
                     SendSocket.receive(packet);
                     String receive_string = new String(packet.getData(), 0, packet.getLength() );
-                    Log.d(TAG, "message receive: " + receive_string);
+                    String frame_id_string = receive_string.substring(0, 5);
+                    String packet_id_string = receive_string.substring(5, 6);
+
+                    int frame_id = Integer.parseInt(frame_id_string);
+                    int packet_id = Integer.parseInt(packet_id_string);
+                    if (currentFrame == frame_id) {
+                        if (packet_id == last_packet_id + 1) {
+                            last_packet_id = packet_id;
+                            if (packet_id == packet_max) {
+                                float timeDif = (new Date()).getTime() - firstPktTime.getTime();
+                                Log.i("receiver", "The transmission delay is " + String.valueOf(timeDif));
+                            }
+                            continue;
+                        }
+                    } else if (currentFrame < frame_id) {
+                        if (packet_id == 1) {
+                            firstPktTime = new Date();
+                            currentFrame = frame_id;
+                        }
+                    } else {
+                        continue;
+                    }
+                    // Log.d(TAG, "message receive: " + receive_string);
                 }
             } catch (Exception e) {
                 // Log.e(TAG, "exception", e);

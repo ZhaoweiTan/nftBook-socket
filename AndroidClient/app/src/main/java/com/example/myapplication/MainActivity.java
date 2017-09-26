@@ -19,6 +19,8 @@ import android.widget.Button;
 import android.widget.EditText;
 import android.widget.TextView;
 
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.Inet4Address;
@@ -171,6 +173,15 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                 int msg_length = messageStr.length();
                 byte[] message = messageStr.getBytes();
 
+                // prepare the file
+                String filename = "results.csv";
+                FileOutputStream outputStream = null;
+                try {
+                    outputStream = openFileOutput(filename, MODE_APPEND);
+                } catch (FileNotFoundException e) {
+                    e.printStackTrace();
+                }
+
                 // receiving the message
                 while(running) {
                     ulPktTime = new Date();
@@ -214,6 +225,21 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                         new_mac = false;
                     }
                     Log.i(TAG2, "RTT " + String.valueOf(timeDif) + "ms, Trans delay " + String.valueOf(timeDif2) + "ms, MAC loss " + String.valueOf(mac_loss) + " packets, average delay is " + String.valueOf(mac_retx_delay) + " ,RLC loss " + String.valueOf(rlc_loss) + " ,RLC delay " + String.valueOf(rlc_retx_delay));
+
+                    String csvString = "";
+                    csvString += String.valueOf(timeDif) + ",";
+                    csvString += String.valueOf(timeDif2) + ",";
+                    csvString += String.valueOf(mac_loss) + ",";
+                    csvString += String.valueOf(mac_retx_delay) + ",";
+                    csvString += String.valueOf(rlc_loss) + ",";
+                    csvString += String.valueOf(rlc_retx_delay) + ",";
+                    csvString += "\n";
+
+                    try {
+                        outputStream.write(csvString.getBytes());
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
 
                     sleep(100);
 

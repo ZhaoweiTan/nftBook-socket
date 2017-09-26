@@ -45,6 +45,9 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     private boolean new_mac = false;
     private float mac_loss;
     private float mac_retx_delay;
+    private boolean new_rlc = false;
+    private float rlc_loss;
+    private float rlc_retx_delay;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -66,7 +69,9 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
 
         IntentFilter mac_loss_filter = new IntentFilter("MobileInsight.LteMacAnalyzer.MAC_RETX");
+        IntentFilter rlc_loss_filter = new IntentFilter("MobileInsight.LteMacAnalyzer.RLC_RETX");
         registerReceiver(MobileInsight_Receiver, mac_loss_filter);
+        registerReceiver(MobileInsight_Receiver, rlc_loss_filter);
     }
 
     View.OnClickListener buttonConnectOnClickListener = new View.OnClickListener() {
@@ -129,6 +134,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
         int currentFrame = -1;
         int last_packet_id = 0;
+        Date ulPktTime;
         Date firstPktTime;
 
         private static final int packet_max = 2;
@@ -165,48 +171,81 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                 int msg_length = messageStr.length();
                 byte[] message = messageStr.getBytes();
 
-                // send the message
-                DatagramPacket p = new DatagramPacket(message, msg_length, ServerAddr, ServerPort);
-                Log.d(TAG2, "message sent");
-                SendSocket.send(p);
-
                 // receiving the message
                 while(running) {
+                    ulPktTime = new Date();
+
+                    // send the message
+                    DatagramPacket p = new DatagramPacket(message, msg_length, ServerAddr, ServerPort);
+                    SendSocket.send(p);
+                    // Log.d(TAG2, "message sent " + firstPktTime.toString());
+
                     // Log.i(TAG2, "Start running");
                     byte[] buf = new byte[MAXPKTSIZE];
                     DatagramPacket packet = new DatagramPacket(buf, buf.length);
-                    SendSocket.receive(packet);
-                    String receive_string = new String(packet.getData(), 0, packet.getLength() );
-                    // Log.d(TAG2, "message receive: " + receive_string);
 
-                    String frame_id_string = receive_string.substring(0, 1);
-                    String packet_id_string = receive_string.substring(1, 2);
 
-                    int frame_id = Integer.parseInt(frame_id_string);
-                    int packet_id = Integer.parseInt(packet_id_string);
-                    // Log.d(TAG2, "frame id is: " + String.valueOf(frame_id) + " packet id is: " + String.valueOf(packet_id));
-
-                    if (currentFrame == frame_id) {
-                        if (packet_id == last_packet_id + 1) {
-                            last_packet_id = packet_id;
-                            if (packet_id == packet_max - 1) {
-                                if (!new_mac) {
-                                    mac_loss = 0;
-                                    mac_retx_delay = 0;
-                                } else {
-                                    new_mac = false;
-                                }
-                                float timeDif = (new Date()).getTime() - firstPktTime.getTime();
-                                Log.i(TAG2, "The transmission delay is " + String.valueOf(timeDif) + "ms, MAC loss " + String.valueOf(mac_loss) + " packets, average delay is " + String.valueOf(mac_retx_delay) );
-                            }
-                        }
-                    } else if (currentFrame < frame_id || frame_id == 0) {
-                        if (packet_id == 0) {
+                    int i = 0;
+                    for (; i < packet_max; i++) {
+                        SendSocket.receive(packet);
+                        if (i == 0) {
                             firstPktTime = new Date();
-                            currentFrame = frame_id;
-                            last_packet_id = 0;
                         }
+                        String receive_string = new String(packet.getData(), 0, packet.getLength() );
+                        Log.d(TAG2, "the string is " + receive_string);
                     }
+
+                    // Log.d(TAG2, "last packet " + new Date().toString());
+
+                    long timeDif = (new Date()).getTime() - ulPktTime.getTime();
+                    long timeDif2 = (new Date()).getTime() - firstPktTime.getTime();
+
+                    if (!new_mac) {
+                        mac_loss = 0;
+                        mac_retx_delay = 0;
+                    } else {
+                        new_mac = false;
+                    }
+
+                    if (!new_rlc) {
+                        rlc_loss = 0;
+                        rlc_retx_delay = 0;
+                    } else {
+                        new_mac = false;
+                    }
+                    Log.i(TAG2, "RTT " + String.valueOf(timeDif) + "ms, Trans delay " + String.valueOf(timeDif2) + "ms, MAC loss " + String.valueOf(mac_loss) + " packets, average delay is " + String.valueOf(mac_retx_delay) + " ,RLC loss " + String.valueOf(rlc_loss) + " ,RLC delay " + String.valueOf(rlc_retx_delay));
+
+                    sleep(100);
+
+//                    String frame_id_string = receive_string.substring(0, 1);
+//                    String packet_id_string = receive_string.substring(1, 2);
+//
+//                    int frame_id = Integer.parseInt(frame_id_string);
+//                    int packet_id = Integer.parseInt(packet_id_string);
+//                    // Log.d(TAG2, "frame id is: " + String.valueOf(frame_id) + " packet id is: " + String.valueOf(packet_id));
+
+//                    if (currentFrame == frame_id) {
+//                        if (packet_id == last_packet_id + 1) {
+//                            last_packet_id = packet_id;
+//                            if (packet_id == packet_max - 1) {
+//                                if (!new_mac) {
+//                                    mac_loss = 0;
+//                                    mac_retx_delay = 0;
+//                                } else {
+//                                    new_mac = false;
+//                                }
+//                                float timeDif = (new Date()).getTime() - firstPktTime.getTime();
+//                                Log.i(TAG2, "The transmission delay is " + String.valueOf(timeDif) + "ms, MAC loss " + String.valueOf(mac_loss) + " packets, average delay is " + String.valueOf(mac_retx_delay) );
+//                            }
+//                        }
+//                    } else if (currentFrame < frame_id || frame_id == 0) {
+//                        if (packet_id == 0) {
+//                            firstPktTime = new Date();
+//                            currentFrame = frame_id;
+//                            last_packet_id = 0;
+//                        }
+//                    }
+
                 }
             } catch (Exception e) {
                 Log.e(TAG2, "exception", e);
@@ -256,6 +295,10 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             new_mac = true;
             mac_loss = Float.parseFloat(intent.getStringExtra("packet loss (pkt/s)"));
             mac_retx_delay =  Float.parseFloat(intent.getStringExtra("retransmission delay (ms/pkt)"));
+        } else if (intent.getAction().equals("MobileInsight.LteMacAnalyzer.RLC_RETX")) {
+            new_rlc = true;
+            rlc_loss = Float.parseFloat(intent.getStringExtra("packet loss (pkt/s)"));
+            rlc_retx_delay =  Float.parseFloat(intent.getStringExtra("retransmission delay (ms/pkt)"));
         }
     }
 };
